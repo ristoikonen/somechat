@@ -1,12 +1,23 @@
 // server/index.ts
 //import React from 'react';
 //import ReactDOM from 'react-dom/client';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { createServer } from 'http';
 
 interface Message {
   text: string;
   sender: string;
+  username: string;
+  userId: string;
+  senderId: string;
+}
+
+interface CustomSocket extends Socket {
+  nickname?: string;
+}
+
+interface CustomSocket extends Socket {
+  username?: string;
 }
 
 const httpServer = createServer();
@@ -20,12 +31,20 @@ const io = new Server(httpServer, {
 
 //io.sockets.setMaxListeners(4);
 
+
+
 io.on('connection', socket => {
   let username: string;
   let sender: string;
   
   socket.on('username', (name: string) => {
-    username = name;
+    (socket as CustomSocket).username = name; // Add username attribute
+  });
+
+  socket.on('getUsername', () => {
+    const name = (socket as CustomSocket).username;
+    socket.emit('username', name); // Send username back to client
+    socket.emit('sender', sender); // Send username back to client
   });
 
   socket.on('joinRoom', (room) => {
@@ -49,6 +68,14 @@ io.on('connection', socket => {
     console.log('user joined room: ' + data.sender);
   });
 
+/*   socket.on('setNickname', (nickname) => {
+    socket.nickname = nickname; // Store nickname in socket object
+  });
+  socket.on('getNickname', () => {
+    socket.emit('nickname', socket.nickname); // Send nickname back to client
+  });
+ */
+
   /* 
   io.on('connection', (socket) => {
     socket.on('chat message', (message) => {
@@ -65,7 +92,7 @@ io.on('connection', socket => {
     //const m = msg + ' ' + (username ?? 'empty suername');
     //msg = m;
     
-    io.emit('chat message', { ...msg, sender: sender, senderId: socket.id }); // Broadcast message to all clients
+    io.emit('chat message', { ...msg,  senderId: socket.id , userId: msg.username }); // Broadcast message to all clients
   }); 
 
   socket.on('disconnect', () => {
