@@ -14,48 +14,56 @@ interface Message {
   time: Date;
 }
 
-let socketId = '';
+
 //let UserId = ''; , userId: UserId
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessageText, setNewMessageText] = useState('');
-  const [socketIdx, setSocketId] = useState<string>();
+  const [socketId, setSocketId] = useState<string>();
   const [username, setUsername] = useState('');
 
   const messageListRef = useRef<HTMLDivElement>(null);
   
-  const messageInput = document.getElementById('message-input') as HTMLInputElement;
-
   //const sendButton = document.getElementById('send-button') as HTMLInputElement;
   
-  const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setUsername(event.target.value);
+
+  const handleUsernameKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {    
+      setUsername(event.currentTarget.value);
+      
+    }
   };
 
+
+
   const handleUsernameEdit = (event: React.ChangeEvent<HTMLButtonElement>) => {
+
     setUsername(event.target.value);
+
+  };
+
+  const handleEnterDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
   };
 
   useEffect(() => {
 
     socket.on("connect", () => {
-      socketId = socket.id ?? '';
-      setSocketId(socketId);
-      console.log('socketId:', socketId ?? 'socketId is nuilli');
+      setSocketId(socket.id ?? '');
+      console.log('Connected, socketId:', socketId ?? 'is null');
     });
 
     socket.on('chat message', (msg: Message) => {
       setMessages(prevMessages => [...prevMessages, msg]);
-      //setIncomingMessageText(msg => msg);
-      //const [newincomingMessage, setIncomingMessageText] = useState<Message>();
+
       console.log('Socket.on message for setIncomingMessage:', msg ?? 'msg is nuilli');
-      console.log('from:', msg.senderId ?? 'senderId is nuilli');
-      //console.log('messages:', messages ?? 'socketId is nuilli');
       console.log('username:', username ?? 'username is nuilli');
 
-      //if (socketId && socketId.length > 0 && msg.sender !== username) {
-      if (msg.sender !== username) {
+      // Incoming message, if the sender is not the current user
+      if (username && username.trim() !== "" && msg.sender && msg.sender !== username ) {
 
         //setIncomingMessage(msg);
         console.log('setIncomingMessage called', msg ?? 'msg is nuilli');
@@ -63,10 +71,12 @@ function App() {
         //if (socketIdx && socketIdx.length > 0 && msg.senderId !== socketIdx && msg.senderId !== socketIdx) {
         // if(msg.sender !== username){    }
     
-        console.log('CREATING GREEM socketId:', socketIdx ?? 'socketId is nuilli');
-        //console.log('setIncomingMessage msg:', msg);  //newMessage
-        console.log('msg.sender !== socketId:', (msg.senderId !== socketIdx).toString());
+        console.log('CREATING GREEM socketId:', socketId ?? 'socketId is nuilli');
+        console.log('msg.sender !== socketId:', (msg.senderId !== socketId).toString());
     
+        addMessage(msg.text, msg.sender, 'message receiver-message');
+
+        /*
         const messageArea = document.getElementById('message-container') as HTMLDivElement;
         const newMessageElement = document.createElement('div') as HTMLDivElement;
         const newMessageText = msg.text ?? ''; // messageInput.value : '';
@@ -76,7 +86,7 @@ function App() {
         messageArea.scrollTop = messageArea.scrollHeight;
     
         messageArea.appendChild(newMessageElement);
-
+        */
       }
 
       //setIncomingMessageText(msg);
@@ -90,7 +100,7 @@ function App() {
     return () => {
       socket.off('chat message'); // Clean up listener
     };
-  }, [username,socketIdx]);
+  }, [username,socketId]);
 
 /*
 interface MMs {
@@ -127,6 +137,25 @@ interface MMs {
 
 */
 
+// pass userName for future use
+const addMessage = (msgText: string, userName: string, className: string) => {
+
+  
+  // accept empty messages
+  if (msgText && userName && userName.trim() !== "" && className && className.trim() !== "") {
+    console.log('addMessage from:', userName);
+    const messageArea = document.getElementById('message-container') as HTMLDivElement;
+    const newMessageElement: HTMLDivElement = document.createElement('div');
+    const newMessageText = msgText;
+    newMessageElement.className = className; 
+    newMessageElement.textContent = newMessageText;
+    messageArea.appendChild(newMessageElement);
+    messageArea.scrollTop = messageArea.scrollHeight;
+
+  }
+
+  
+};
 
 
   
@@ -136,61 +165,43 @@ interface MMs {
 
     if (newMessageText && username && username.trim() !== "") {
       console.log('sendMessage from:', username);
-      const messageArea = document.getElementById('message-container') as HTMLDivElement;
-      const newMessageElement: HTMLDivElement = document.createElement('div');
-      const newMessageText = messageInput ? messageInput.value : '';
-      newMessageElement.className = 'message sender-message'; 
-      newMessageElement.textContent = newMessageText;
-      messageArea.appendChild(newMessageElement);
-      messageArea.scrollTop = messageArea.scrollHeight;
-      socket.emit('chat message', { text: newMessageText, sender: username, senderId: socketIdx, time: new Date() });
+      addMessage(newMessageText,username , 'message sender-message');
+
+      
+      socket.emit('chat message', { text: newMessageText, sender: username, senderId: socketId, time: new Date() });
     }
 
     
   };
 
-/*
-  const setIncomingMessage = (msg: Message) => {
-    console.log('setIncomingMessage called', msg ?? 'msg is nuilli');
-
-    //if (socketIdx && socketIdx.length > 0 && msg.senderId !== socketIdx && msg.senderId !== socketIdx) {
-    // if(msg.sender !== username){    }
-
-    console.log('CREATING GREEM socketId:', socketIdx ?? 'socketId is nuilli');
-    //console.log('setIncomingMessage msg:', msg);  //newMessage
-    console.log('msg.sender !== socketId:', (msg.senderId !== socketIdx).toString());
-
-    const messageArea = document.getElementById('message-container') as HTMLDivElement;
-    const newMessageElement = document.createElement('div') as HTMLDivElement;
-    const newMessageText = msg.text ?? ''; // messageInput.value : '';
-      
-    newMessageElement.className = 'message receiver-message'; 
-    newMessageElement.textContent = newMessageText;
-    messageArea.scrollTop = messageArea.scrollHeight;
-
-    messageArea.appendChild(newMessageElement);
-
-  };
-*/
 
   return (
     <div className="chat-container">
 
 
-    <div>
-      <label htmlFor="username">Username:</label>
-      <input
-        type="text"
-        id="username"
-        value={username}
-        onChange={handleUsernameChange}
-      />
-      {/* ... other elements */}
-    </div>
+
+
 
 
     {!username ? (
+
+      
+
       <div className="login-screen">
+
+<div className="input-area">
+          <label htmlFor="loginusername">Username:</label>
+            <input
+              type="text"
+              id="loginusername"
+              placeholder="Type your name and enter"
+              value={username}
+              onKeyDown={handleUsernameKeyDown}
+            />
+            
+            
+          </div>
+
         <input
           type="text"
           placeholder="Enter username"
